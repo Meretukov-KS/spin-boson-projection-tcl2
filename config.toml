@@ -1,0 +1,55 @@
+# Physical parameters and grid sizes. Internal solver settings are in Python.
+[[spins]]
+delta = 2.0
+field = 0.0
+coupling = 1.0
+initial_bloch = [0.0, 0.0, 1.0]
+
+[bath]
+beta = 5.0
+lambda = 0.1
+spectral_density = "ohmic"
+
+# Each density uses only its own section.
+# Optional in any section: time_amplitude, time_frequency, time_phase.
+[spectral_parameters.ohmic]
+xi = 0.2
+ohmic_exponent = 1.0
+wc = 7.5
+
+[spectral_parameters.ohmic_lorentz]
+xi = 0.2
+ohmic_exponent = 1.0
+wc = 7.5
+lorentz_center = 2.7
+lorentz_width = 0.35
+lorentz_weight = 0.2
+
+# Both HEOM comparison modes use this section.
+[spectral_parameters.drude]
+drude_reorganization = 0.1875
+drude_gamma = 7.5
+
+[spectral_parameters.custom]
+amplitude = 0.0005
+exponent = 3.0
+cutoff = 7.5
+
+[time]
+maximum = 20.0
+points = 801
+
+[frequency]
+minimum = 0.05
+maximum = 49.7876405099536
+physical_grid_points = 200
+physical_mode_count = 200
+quadrature_points = 5200
+probe_frequencies = [2.0, 2.7, 3.2]
+
+# excess_amplitude = 0 gives a thermal initial bath; keep this section if desired.
+# A positive amplitude adds a Gaussian peak to the Bose distribution.
+[initial_occupation]
+excess_amplitude = 0.0
+excess_width = 0.2
+excess_center = 2.7
