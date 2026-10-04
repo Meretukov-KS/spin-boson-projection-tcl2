@@ -128,6 +128,34 @@ class ModelTests(unittest.TestCase):
         for frequency in pm.PROBE_FREQUENCIES:
             self.assertTrue(np.any(num.omega_arr == frequency))
 
+    def test_population_grid_is_independent_of_spectrum_and_initial_state(self):
+        expected = num.build_mode_grid()
+        with patch.object(num, "J", side_effect=AssertionError("Grid must not read J")), \
+             patch.object(num, "N_I", side_effect=AssertionError("Grid must not read N0")):
+            np.testing.assert_array_equal(num.build_mode_grid(), expected)
+        altered = replace(pm, SPECTRAL_DENSITY="ohmic_lorentz", BETA=0.5, Delta_N=0.5)
+        with patch.object(num, "pm", altered):
+            np.testing.assert_array_equal(num.build_mode_grid(), expected)
+
+    def test_switching_quadrature_keeps_population_nodes_and_state(self):
+        omega, initial = num.omega_arr.copy(), num.N0.copy()
+        original = num._quadrature_density_key
+        try:
+            num.configure_quadrature("drude")
+            np.testing.assert_array_equal(num.omega_arr, omega)
+            np.testing.assert_array_equal(num.N0, initial)
+        finally:
+            num.configure_quadrature(original)
+
+    def test_resonance_band_has_sufficient_phase_resolution(self):
+        for frequency in num.sqrt_Omega_j:
+            width = max(0.5 * frequency, 2 * np.pi / pm.T_MAX)
+            band = num.omega_arr[(num.omega_arr >= max(pm.OMEGA_MIN, frequency-width)) &
+                                 (num.omega_arr <= min(pm.OMEGA_MAX, frequency+width))]
+            if len(band) > 1:
+                self.assertLessEqual(np.max(np.diff(band))*pm.T_MAX,
+                                     num.MODE_MAX_PHASE_INCREMENT*(1+1e-10))
+
     def test_adaptive_correlation_matches_dense_reference(self):
         dense_omega = np.linspace(pm.OMEGA_MIN, pm.OMEGA_MAX, 100_001)
         dense_n0 = num.N_I(dense_omega)

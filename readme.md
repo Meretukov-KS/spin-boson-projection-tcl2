@@ -180,11 +180,19 @@ p = physical_mode_count / (maximum - minimum)
 Changing a numerical node count does not change `p`. Changing the frequency
 interval at fixed `physical_mode_count` does change `p`.
 
-Both grids concentrate nodes according to `J(w,0)*(2*N(w,0)+1)`. Transition
-frequencies inside the interval and requested probes are added to the population
-grid. The integration grid includes uniformly spaced guard nodes and may exceed
-`quadrature_points` to resolve oscillatory phases. Grids are built before time
-integration and are not adapted during the run.
+The population grid has a uniform base plus deterministic refinement bands around
+the spin transition frequencies. Band half-widths are `max(Omega/2, 2*pi/T_MAX)`;
+their maximum spacing is `pi/(8*T_MAX)`. Exact transition and probe frequencies
+are included. Thus the actual node count may exceed `physical_grid_points`.
+Population nodes do not depend on the spectral density, its parameters,
+temperature, or initial populations. Keep the same spin, frequency, probe, and
+time settings to compare runs by direct subtraction on identical nodes.
+
+Only the integration grid concentrates nodes according to `J(w,0)*(2*N(w,0)+1)`.
+It also includes uniformly spaced guard nodes and may exceed `quadrature_points`
+to resolve oscillatory phases. Both grids are built before time integration and
+remain fixed during the run. Population changes are interpolated onto quadrature
+nodes inside the integral; no interpolation between compared runs is necessary.
 
 ### Initial populations: `[initial_occupation]`
 

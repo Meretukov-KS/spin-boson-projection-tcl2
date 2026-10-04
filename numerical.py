@@ -39,6 +39,7 @@ RELATIVE_TOLERANCE = 1e-7
 PHYSICALITY_TOLERANCE = 1e-7
 ADAPTIVE_STRENGTH = 0.8
 MAX_PHASE_INCREMENT = np.pi / 4
+MODE_MAX_PHASE_INCREMENT = np.pi / 8
 # Resolve the highest frequency on the kernel interpolation grid automatically.
 KERNEL_TAU_POINTS = max(24001, int(np.ceil(8 * pm.OMEGA_MAX * pm.T_MAX)) + 1)
 
@@ -200,14 +201,27 @@ def _importance_nodes(
     return np.interp(np.linspace(0.0, 1.0, count), cumulative, dense)
 
 
-def build_mode_grid(density):
-    base = _importance_nodes(pm.MODE_GRID_POINTS, density, ADAPTIVE_STRENGTH)
+def build_mode_grid():
+    """Fixed population nodes, independent of spectrum and initial populations."""
+    base = np.linspace(pm.OMEGA_MIN, pm.OMEGA_MAX, pm.MODE_GRID_POINTS)
     anchors = np.asarray(tuple(sqrt_Omega_j) + pm.PROBE_FREQUENCIES, dtype=float)
     anchors = anchors[(anchors >= pm.OMEGA_MIN) & (anchors <= pm.OMEGA_MAX)]
-    return np.unique(np.concatenate((base, anchors)))
+    grids = [base, anchors]
+    # Resolve finite-time resonances without adapting nodes to J or N(omega,0).
+    # These deterministic bands are identical for runs with the same spin/grid/time settings.
+    spacing = min((pm.OMEGA_MAX - pm.OMEGA_MIN) / (pm.MODE_GRID_POINTS - 1),
+                  MODE_MAX_PHASE_INCREMENT / pm.T_MAX)
+    for frequency in np.unique(sqrt_Omega_j):
+        width = max(0.5 * frequency, 2 * np.pi / pm.T_MAX)
+        lower = max(pm.OMEGA_MIN, frequency - width)
+        upper = min(pm.OMEGA_MAX, frequency + width)
+        if lower < upper:
+            count = max(2, int(np.ceil((upper - lower) / spacing)) + 1)
+            grids.append(np.linspace(lower, upper, count))
+    return np.unique(np.concatenate(grids))
 
 
-omega_arr = build_mode_grid(ACTIVE_SPECTRAL_DENSITY)
+omega_arr = build_mode_grid()
 N0 = N_I(omega_arr)
 def build_quadrature_grid(
     spectral_density: str | None = None,
@@ -241,13 +255,11 @@ quad_weights = trapezoid_weights(quad_omega)
 
 def configure_quadrature(spectral_density: str) -> None:
     """Rebuild density-dependent adaptive nodes before a solver run."""
-    global _quadrature_density_key, quad_omega, quad_weights, omega_arr, N0
+    global _quadrature_density_key, quad_omega, quad_weights
     density = resolve_spectral_density(spectral_density)
     key = density
     if key == _quadrature_density_key:
         return
-    omega_arr = build_mode_grid(density)
-    N0 = N_I(omega_arr)
     quad_omega = build_quadrature_grid(density)
     quad_weights = trapezoid_weights(quad_omega)
     _quadrature_density_key = key
@@ -255,13 +267,15 @@ def configure_quadrature(spectral_density: str) -> None:
     _phase_cache.clear()
 
 
-def quadrature_diagnostics() -> dict[str, float | int | bool]:
+def quadrature_diagnostics() -> dict[str, float | int | bool | str]:
     """Return compact diagnostics for the actual quadrature grid."""
     spacing = np.diff(quad_omega)
     return {
         "adaptive": True,
         "kernel_tau_points": KERNEL_TAU_POINTS,
         "mode_grid_points": len(omega_arr),
+        "mode_grid_kind": "fixed_uniform_base_with_spin_resonance_bands",
+        "mode_max_phase_increment": MODE_MAX_PHASE_INCREMENT,
         "requested_points": int(pm.QUAD_POINTS),
         "actual_points": int(len(quad_omega)),
         "minimum_spacing": float(np.min(spacing)),
