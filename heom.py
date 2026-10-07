@@ -80,7 +80,7 @@ def solve_heom(
         Q=sz,
         T=pm.TEMP,
         # Absorb both coupling factors into the bath correlation amplitude.
-        lam=(pm.LAMBDA * spin.COUPLING)**2 * reorganization,
+        lam=np.pi * (pm.LAMBDA * spin.COUPLING)**2 * reorganization,
         gamma=gamma,
         Nk=n_exp,
     )
