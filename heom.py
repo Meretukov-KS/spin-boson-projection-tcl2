@@ -19,7 +19,7 @@ pm = get_config()
 
 # Internal HEOM defaults, not configurable through TOML.
 N_DEPTH = 5
-N_EXPANSION = 6
+N_EXPANSION = 16
 USE_PADE = True
 
 

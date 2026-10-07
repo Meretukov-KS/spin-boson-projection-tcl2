@@ -225,13 +225,35 @@ The spin Hamiltonian, initial spin state, temperature, `lambda`, and individual
 spectral sections do not affect the comparison. TCL2 uses the configured finite
 frequency interval; HEOM uses the full Drude spectrum.
 
+### HEOM convergence check
+
+From the directory containing `run.py`, run:
+
+```sh
+python tests/check_heom_convergence.py
+```
+
+The script uses the Drude comparison settings in `config.toml` and requires
+QuTiP. It compares Padé expansion sizes `10, 12, 14, 16` against `18` at
+hierarchy depth `5`, and depths `3, 4, 5` against `6` with `16` Padé terms.
+For each spin component, the plotted value is the maximum absolute difference
+over the output time grid relative to the highest setting tested. The reference
+setting is not assumed to be exact.
+
+The plots are saved as `heom_check/pade_convergence.png` and
+`heom_check/depth_convergence.png`. The folder is created next to `run.py`
+when the check starts. The Padé plot is saved after the five expansion runs;
+the depth plot is saved after the remaining three runs. Progress is printed
+to the terminal. Rerunning the check replaces these two plots. This check can
+take substantially longer than a single comparison run.
+
 ## Numerical settings
 
 Internal settings are constants, not TOML parameters:
 
 - `numerical.py`: absolute tolerance `1e-9`, relative tolerance `1e-7`,
   maximum `40` fixed-point iterations, physicality tolerance `1e-7`.
-- `heom.py`: `N_DEPTH = 5`, `N_EXPANSION = 6`, `USE_PADE = True`.
+- `heom.py`: `N_DEPTH = 5`, `N_EXPANSION = 16`, `USE_PADE = True`.
 - The kernel lookup-grid size is selected automatically.
 
 TCL2 uses fixed-step TR-BDF2. Its tolerances control implicit iterations, not
