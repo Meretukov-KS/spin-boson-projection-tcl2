@@ -2,12 +2,14 @@
 
 Numerical integration of coupled TCL2 equations for spin expectation values and
 bosonic mode populations. Optional comparison with the QuTiP HEOM solver.
+The separate discrete-mode solver compares projected TCL2 dynamics with full
+spin-boson Hamiltonian evolution in QuTiP.
 
 ## Requirements
 
 - Python 3.11 or newer.
 - NumPy and Matplotlib.
-- QuTiP for HEOM comparisons. The code has been tested with QuTiP 5.2.3.
+- QuTiP for HEOM and discrete-mode comparisons. The code has been tested with QuTiP 5.2.3.
 
 Install the required packages in the Python environment used to run the program:
 
@@ -44,7 +46,91 @@ python run.py numeric --config experiment.toml
 Use a separate process for each configuration. Run calculations through `run.py`,
 not by executing `numerical.py` or `heom.py` directly.
 
-## Configuration
+## Discrete-mode comparison
+
+From the repository root, run:
+
+```sh
+python discret/discret.py
+```
+
+This is a separate entry point, not a mode of `run.py`. It reads
+`discret/params.toml`; the root `config.toml` is not used. To select another file:
+
+```sh
+python discret/discret.py --config discret/experiment.toml
+```
+
+Each run computes both solutions for one spin and one or more explicit bosonic
+modes:
+
+- Projected TCL2 equations with evolving mode populations and discrete sums.
+  Time integrals for constant couplings are evaluated analytically; the resulting
+  equations are integrated with fixed-step RK4.
+- Full Hamiltonian evolution using QuTiP `mesolve`, without collapse operators,
+  a rotating-wave approximation, or a projection closure. This is not HEOM.
+  Numerical integration and finite Fock-space truncation remain necessary.
+
+Both calculations use the same Hamiltonian parameters:
+
+```text
+H = -delta*sigma_x/2 + field*sigma_z/2
+    + sum_m w_m*b_m.dag()*b_m
+    + lambda*sigma_z*sum_m g_m*(b_m + b_m.dag())
+```
+
+Here `g` is real and does not include `lambda`. No continuous spectral density,
+mode-density normalization, or frequency quadrature is used.
+
+### Discrete configuration
+
+| Section | Parameter | Meaning |
+| --- | --- | --- |
+| `[[spins]]` | `delta`, `field` | Spin Hamiltonian coefficients. Exactly one spin is supported. |
+| | `initial_bloch` | Initial `[<sigma_x>, <sigma_y>, <sigma_z>]`, with norm at most one. |
+| `[[modes]]` | `w` | Positive mode frequency. |
+| | `g` | Real coupling amplitude of this mode. |
+| | `levels` | Number of Fock states, from `0` through `levels-1`. Integer at least 2; default 12. |
+| `[bath]` | `beta` | Positive inverse temperature; `inf` selects the vacuum. |
+| | `lambda` | Interaction multiplier, with `0 <= lambda < 1`. |
+| `[time]` | `maximum` | Positive final time; both solutions start at zero. |
+| | `points` | Number of output times, including both endpoints. Integer at least 2. Also sets the TCL2 step. |
+
+Add one `[[modes]]` block for each mode. The Hilbert-space dimension of the full
+model is `2 * product(levels)`, so its cost grows rapidly with the number of modes.
+
+The initial full state is a product of the specified spin state and normalized
+thermal states truncated at each mode's Fock cutoff. The projected equations
+start from the same mode means. Their Gaussian closure does not reproduce all
+higher moments of a truncated thermal state. The saved summary reports the
+omitted thermal probability and the infinite-bath thermal means so this cutoff
+effect can be checked.
+
+Increase `levels` and compare trajectories to check Fock-space convergence.
+Increase `time.points` to check RK4 convergence. A warning is issued if the
+highest retained Fock level becomes appreciably populated, or if the projected
+solution has negative populations or a Bloch-vector norm above one. Values are
+saved without clipping. These warnings are diagnostics, not convergence proofs.
+
+### Discrete output
+
+Each run creates `discret/results/<UTC timestamp>/`. Existing runs are preserved.
+The spin components and each mode population are plotted with both solutions
+on the same axes, in the Schrodinger picture.
+
+| File | Contents |
+| --- | --- |
+| `comparison.png`, `comparison.pdf` | Shared QuTiP/TCL2 comparison plots. |
+| `solutions.npz` | Time grid, both spin and population trajectories, projected interaction-picture spin components, full-model energy components, and highest-level populations. |
+| `observables.csv` | Time-resolved spin and population means for both methods, full-model energies, and highest-level populations, with named columns. |
+| `params.toml` | Copy of the input configuration. |
+| `parameters_and_summary.json` | Effective parameters, initial populations, solver timings, QuTiP version, tolerances, maximum differences, energy drift, and physicality/cutoff diagnostics. |
+
+The saved solutions contain the calculated observables, not the full composite
+density matrix at every time. Energies are ordered as spin, bath, interaction,
+and total energy in the NPZ array `exact_energies`. Mode indices start at zero.
+
+## Continuum solver configuration
 
 Edit `config.toml` before running. Use consistent units for energy, frequency,
 time, and inverse temperature; the code uses `hbar = k_B = 1`.
@@ -253,7 +339,7 @@ Internal settings are constants, not TOML parameters:
 
 - `numerical.py`: absolute tolerance `1e-9`, relative tolerance `1e-7`,
   maximum `40` fixed-point iterations, physicality tolerance `1e-7`.
-- `heom.py`: `N_DEPTH = 5`, `N_EXPANSION = 16`, `USE_PADE = True`.
+- `heom.py`: `N_DEPTH = 6`, `N_EXPANSION = 20`, `USE_PADE = True`.
 - The kernel lookup-grid size is selected automatically.
 
 TCL2 uses fixed-step TR-BDF2. Its tolerances control implicit iterations, not

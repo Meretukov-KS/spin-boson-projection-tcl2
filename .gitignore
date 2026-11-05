@@ -2,3 +2,10 @@ numeric/
 compare/
 compare-frozen/
 heom_check/
+search/
+discret/results/
+__pycache__/
+/search.py
+/search.toml
+/tests/test_search.py
+/search/
