@@ -3,7 +3,7 @@ compare/
 compare-frozen/
 heom_check/
 search/
-discret/results/
+finite_modes/results/
 __pycache__/
 /search.py
 /search.toml

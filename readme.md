@@ -46,19 +46,19 @@ python run.py numeric --config experiment.toml
 Use a separate process for each configuration. Run calculations through `run.py`,
 not by executing `numerical.py` or `heom.py` directly.
 
-## Discrete-mode comparison
+## Finite-mode comparison
 
 From the repository root, run:
 
 ```sh
-python discret/discret.py
+python finite_modes/compare.py
 ```
 
 This is a separate entry point, not a mode of `run.py`. It reads
-`discret/params.toml`; the root `config.toml` is not used. To select another file:
+`finite_modes/params.toml`; the root `config.toml` is not used. To select another file:
 
 ```sh
-python discret/discret.py --config discret/experiment.toml
+python finite_modes/compare.py --config finite_modes/experiment.toml
 ```
 
 Each run computes both solutions for one spin and one or more explicit bosonic
@@ -82,7 +82,7 @@ H = -delta*sigma_x/2 + field*sigma_z/2
 Here `g` is real and does not include `lambda`. No continuous spectral density,
 mode-density normalization, or frequency quadrature is used.
 
-### Discrete configuration
+### Finite-mode configuration
 
 | Section | Parameter | Meaning |
 | --- | --- | --- |
@@ -112,9 +112,9 @@ highest retained Fock level becomes appreciably populated, or if the projected
 solution has negative populations or a Bloch-vector norm above one. Values are
 saved without clipping. These warnings are diagnostics, not convergence proofs.
 
-### Discrete output
+### Finite-mode output
 
-Each run creates `discret/results/<UTC timestamp>/`. Existing runs are preserved.
+Each run creates `finite_modes/results/<UTC timestamp>/`. Existing runs are preserved.
 The spin components and each mode population are plotted with both solutions
 on the same axes, in the Schrodinger picture.
 

@@ -1,0 +1,20 @@
+# One spin and explicit modes. Add [[modes]] for each additional mode.
+[[spins]]
+delta = 3.0
+field = 4.0
+initial_bloch = [0.0, 0.0, 1.0]
+
+[[modes]]
+g = 2
+w = 4.5
+levels = 60
+
+[bath]
+beta = 5.0
+lambda = 0.05
+
+[time]
+maximum = 40.0
+points = 4600
+
+
